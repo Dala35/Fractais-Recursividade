@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protocolo de Expansão - Fractais & Recursividade v3.0</title>
+    <title>Protocolo de Expansão - Fractais & Recursividade v3.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -13,19 +13,36 @@
         body { font-family: 'Inter', sans-serif; background-color: #010409; color: #f8fafc; margin: 0; overflow: hidden; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         .sacred-gradient { 
-            background: radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.15) 0%, transparent 70%),
-                        linear-gradient(to top, #010409, #050514);
+            background: radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.2) 0%, transparent 75%),
+                        linear-gradient(to top, #010409, #05051a);
         }
         .pulse-layer {
             position: absolute;
             inset: 0;
             pointer-events: none;
-            background: repeating-radial-gradient(circle at 50% 90%, transparent 0, rgba(139, 92, 246, 0.03) 10%, transparent 20%);
-            animation: ripple 20s linear infinite;
+            background: repeating-radial-gradient(circle at 50% 90%, transparent 0, rgba(139, 92, 246, 0.04) 10%, transparent 20%);
+            animation: ripple 25s linear infinite;
         }
         @keyframes ripple { from { background-position: 0 0; } to { background-position: 0 -1000px; } }
-        .custom-scrollbar::-webkit-scrollbar { width: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.5); }
+        
+        .guide-text {
+            animation: fadeSlide 8s ease-in-out infinite;
+        }
+        @keyframes fadeSlide {
+            0%, 100% { opacity: 0; transform: translateY(10px); }
+            10%, 90% { opacity: 1; transform: translateY(0); }
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #8b5cf6;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #8b5cf6;
+        }
     </style>
 </head>
 <body class="sacred-gradient">
@@ -33,11 +50,19 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef } = React;
 
-        const APP_ID = "FRACTAL-ANCESTRAL-03";
+        const APP_ID = "FRACTAL-ANCESTRAL-3.5";
 
-        // --- AUDIO ENGINE (Bio-Ressonância) ---
+        const GUIDE_MESSAGES = [
+            "Observe a base: Tudo o que existe nasce de uma única verdade simples.",
+            "A repetição não é estagnação, é a arquitetura da eternidade.",
+            "Mova seu cursor. Você não é apenas um observador, você é um agente de mudança.",
+            "As luzes que correm pelos ramos são pensamentos ancestrais buscando manifestação.",
+            "O caos que você vê é apenas uma ordem complexa que você está prestes a decifrar.",
+            "Sua linhagem é um fractal: você carrega o código de todos os que vieram antes."
+        ];
+
         const useBioAudio = () => {
             const audioCtx = useRef(null);
             const initAudio = () => {
@@ -45,35 +70,46 @@
                     audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
                 }
             };
-            const triggerHarmonic = (freq, vol = 0.05) => {
-                if (!audioCtx.current) return;
+            const triggerHarmonic = (freq, vol = 0.03) => {
+                if (!audioCtx.current || audioCtx.current.state === 'suspended') return;
                 const osc = audioCtx.current.createOscillator();
                 const g = audioCtx.current.createGain();
-                osc.type = 'triangle';
+                osc.type = 'sine';
                 osc.frequency.setValueAtTime(freq, audioCtx.current.currentTime);
                 g.gain.setValueAtTime(vol, audioCtx.current.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.current.currentTime + 1);
+                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.current.currentTime + 1.5);
                 osc.connect(g).connect(audioCtx.current.destination);
-                osc.start(); osc.stop(audioCtx.current.currentTime + 1);
+                osc.start(); osc.stop(audioCtx.current.currentTime + 1.5);
             };
             return { initAudio, triggerHarmonic };
         };
 
         function App() {
             const [config, setConfig] = useState({
-                depth: 7,
-                angle: 28,
-                ratio: 0.76,
-                growth: 1.0,
-                chaos: 2.5
+                depth: 8,
+                angle: 25,
+                ratio: 0.77,
+                chaos: 1.5,
+                flowSpeed: 0.005
             });
             const [time, setTime] = useState(0);
             const [mouse, setMouse] = useState({ x: 0, y: 0 });
+            const [guideIndex, setGuideIndex] = useState(0);
             const canvasRef = useRef(null);
             const { initAudio, triggerHarmonic } = useBioAudio();
 
             useEffect(() => {
-                const handleMove = (e) => setMouse({ x: (e.clientX/window.innerWidth)-0.5, y: (e.clientY/window.innerHeight)-0.5 });
+                const interval = setInterval(() => {
+                    setGuideIndex(prev => (prev + 1) % GUIDE_MESSAGES.length);
+                }, 8000);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                const handleMove = (e) => setMouse({ 
+                    x: (e.clientX / window.innerWidth) - 0.5, 
+                    y: (e.clientY / window.innerHeight) - 0.5 
+                });
                 window.addEventListener('mousemove', handleMove);
                 return () => window.removeEventListener('mousemove', handleMove);
             }, []);
@@ -91,168 +127,184 @@
                 window.addEventListener('resize', resize);
                 resize();
 
-                const drawAncestralNode = (x1, y1, angle, len, d, pulseOffset) => {
+                const drawBranch = (x1, y1, angle, len, d, offset) => {
                     if (d === 0) return;
 
-                    // O "Vento da Memória" - Movimento orgânico
-                    const wind = Math.sin(time * 0.001 + d + pulseOffset) * config.chaos;
-                    const attraction = mouse.x * (15 * (config.depth - d));
+                    // Dinâmica de Movimento Vital
+                    const wind = Math.sin(time * 0.001 + d + offset) * config.chaos;
+                    const interactiveBend = mouse.x * (20 * (config.depth - d));
                     
-                    const x2 = x1 + Math.cos((angle + wind + attraction) * Math.PI / 180) * len * config.growth;
-                    const y2 = y1 + Math.sin((angle + wind + attraction) * Math.PI / 180) * len * config.growth;
+                    const x2 = x1 + Math.cos((angle + wind + interactiveBend) * Math.PI / 180) * len;
+                    const y2 = y1 + Math.sin((angle + wind + interactiveBend) * Math.PI / 180) * len;
 
-                    // Pulso de Informação (A verdade viajando)
-                    const isPulsing = Math.abs(Math.sin(time * 0.005 - d * 0.5)) > 0.95;
-                    
+                    // Pulso de Consciência
+                    const pulsePos = (time * config.flowSpeed) % 1;
+                    const isPulsing = Math.abs((1 - (d / config.depth)) - pulsePos) < 0.1;
+
                     ctx.beginPath();
                     ctx.moveTo(x1, y1);
                     ctx.lineTo(x2, y2);
                     
-                    const hue = (250 + d * 12 + time * 0.02) % 360;
-                    ctx.strokeStyle = isPulsing 
-                        ? `hsla(${hue}, 100%, 80%, 0.9)` 
-                        : `hsla(${hue}, 50%, 40%, ${d / config.depth})`;
+                    const hue = (240 + d * 15 + time * 0.01) % 360;
+                    if (isPulsing) {
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 85%, 0.8)`;
+                        ctx.lineWidth = d * 1.5;
+                        if (d === 1 && Math.random() > 0.98) triggerHarmonic(330 + (8-d)*50);
+                    } else {
+                        ctx.strokeStyle = `hsla(${hue}, 60%, 40%, ${0.2 + (d / config.depth) * 0.6})`;
+                        ctx.lineWidth = d * 0.6;
+                    }
                     
-                    ctx.lineWidth = isPulsing ? d * 1.2 : d * 0.8;
                     ctx.lineCap = 'round';
                     ctx.stroke();
 
-                    if (isPulsing && d === 1) {
-                        // Trigger de som sutil quando a luz atinge a ponta
-                        if (Math.random() > 0.99) triggerHarmonic(440 + d * 100);
-                    }
-
-                    // Frutos de Consciência
+                    // Renderização das "Sementes de Dados"
                     if (d <= 2) {
                         ctx.beginPath();
-                        ctx.arc(x2, y2, isPulsing ? 3 : 1.5, 0, Math.PI*2);
-                        ctx.fillStyle = isPulsing ? '#fff' : `hsla(${hue}, 100%, 70%, 0.4)`;
+                        ctx.arc(x2, y2, isPulsing ? 3 : 1, 0, Math.PI * 2);
+                        ctx.fillStyle = isPulsing ? '#fff' : `hsla(${hue}, 80%, 60%, 0.3)`;
                         ctx.fill();
                     }
 
-                    // Bifurcação assimétrica (Realidade Natural)
-                    const asymmetry = Math.sin(time * 0.0007) * 2;
-                    drawAncestralNode(x2, y2, angle - config.angle + asymmetry, len * config.ratio, d - 1, pulseOffset + 0.5);
-                    drawAncestralNode(x2, y2, angle + config.angle + asymmetry, len * config.ratio, d - 1, pulseOffset + 1.2);
+                    // Divisão Assimétrica Real
+                    const jitter = Math.sin(time * 0.0005) * 1.5;
+                    drawBranch(x2, y2, angle - config.angle + jitter, len * config.ratio, d - 1, offset + 1);
+                    drawBranch(x2, y2, angle + config.angle - jitter, len * config.ratio, d - 1, offset + 2);
                 };
 
-                const render = (t) => {
+                const animate = (t) => {
                     setTime(t);
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     
-                    // Desenho da Raiz (Base da Existência)
                     const centerX = canvas.offsetWidth / 2;
-                    const centerY = canvas.offsetHeight * 0.92;
-                    
-                    ctx.shadowBlur = 15;
-                    ctx.shadowColor = 'rgba(139, 92, 246, 0.2)';
-                    
-                    drawAncestralNode(centerX, centerY, -90, canvas.offsetHeight * 0.22, config.depth, 0);
-                    
+                    const centerY = canvas.offsetHeight * 0.95;
+
+                    // Desenho da Raiz (Base Forte)
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = 'rgba(139, 92, 246, 0.3)';
+                    drawBranch(centerX, centerY, -90, canvas.offsetHeight * 0.2, config.depth, 0);
                     ctx.shadowBlur = 0;
-                    frame = requestAnimationFrame(render);
+
+                    frame = requestAnimationFrame(animate);
                 };
 
-                frame = requestAnimationFrame(render);
+                frame = requestAnimationFrame(animate);
                 return () => { cancelAnimationFrame(frame); window.removeEventListener('resize', resize); };
             }, [config, mouse, time]);
 
             return (
-                <div className="h-screen w-full flex flex-col p-4 md:p-8 overflow-hidden relative z-10">
-                    {/* Top Bar - Conexão Ética */}
-                    <div className="flex justify-between items-start mb-10">
-                        <div className="group cursor-help">
-                            <h1 className="text-2xl font-black tracking-tighter text-white flex items-center gap-3">
-                                <span className="w-2 h-8 bg-violet-600"></span>
-                                ANCESTRAL_RECURSION
-                            </h1>
-                            <p className="text-[10px] font-mono text-violet-400/60 mt-1 uppercase tracking-[0.3em]">
-                                Módulo de Reconhecimento de Padrões Universais
-                            </p>
+                <div className="h-screen w-full flex flex-col p-6 md:p-10 overflow-hidden relative z-10">
+                    {/* Orientação em Tempo Real (O Guia) */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center max-w-xl z-0">
+                        <p className="guide-text text-lg md:text-2xl font-light italic text-violet-300/20 leading-relaxed px-4">
+                            "{GUIDE_MESSAGES[guideIndex]}"
+                        </p>
+                    </div>
+
+                    <div className="flex justify-between items-start mb-8 relative z-20">
+                        <div>
+                            <div className="flex items-center gap-4 mb-2">
+                                <div className="w-3 h-3 bg-violet-500 rounded-full animate-ping"></div>
+                                <h1 className="text-3xl font-black tracking-tighter text-white glow-text uppercase italic">Conscious_Recursion</h1>
+                            </div>
+                            <p className="text-[10px] font-mono text-violet-400 tracking-[0.5em] uppercase pl-7">Protocolo Ancestral Ativo</p>
                         </div>
                         
                         <div className="flex gap-4">
                             <button 
                                 onClick={initAudio}
-                                className="px-4 py-2 border border-violet-500/30 text-[10px] font-mono hover:bg-violet-500 hover:text-white transition-all rounded-full bg-black/40"
+                                className="px-6 py-2 border border-violet-500/40 text-[11px] font-mono hover:bg-violet-600 hover:text-white transition-all rounded-full bg-black/60 backdrop-blur-md text-violet-300"
                             >
-                                [ SINCRONIZAR BIO-RITMO ]
+                                [ INICIAR BIO-SINCRONIA ]
                             </button>
                         </div>
                     </div>
 
-                    <div className="flex-1 grid grid-cols-12 gap-8 min-h-0">
-                        {/* Painel de Manipulação da Realidade */}
+                    <div className="flex-1 grid grid-cols-12 gap-10 min-h-0 relative z-20">
+                        {/* Controles de Manifestação */}
                         <div className="col-span-12 lg:col-span-3 flex flex-col gap-6">
-                            <div className="bg-white/[0.02] border border-white/10 p-6 rounded-3xl backdrop-blur-2xl space-y-8">
-                                <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-widest flex items-center gap-2">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse"></span>
-                                    DNA_Digital_Config
+                            <div className="bg-black/40 border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-3xl space-y-10 shadow-2xl">
+                                <h3 className="text-[11px] font-mono text-violet-400 uppercase tracking-widest flex items-center gap-3">
+                                    <span className="w-4 h-[1px] bg-violet-500"></span>
+                                    Geometria Sagrada
                                 </h3>
 
-                                <Slider label="Complexidade Ancestral" val={config.depth} min={1} max={11} 
-                                    onChange={v => setConfig({...config, depth: v})} />
-                                <Slider label="Angulação de Escolha" val={config.angle} min={10} max={120} 
-                                    onChange={v => setConfig({...config, angle: v})} suffix="°" />
-                                <Slider label="Resiliência do Ramo" val={config.ratio} min={0.5} max={0.85} step={0.01} 
-                                    onChange={v => setConfig({...config, ratio: v})} />
-                                <Slider label="Entropia Orgânica" val={config.chaos} min={0} max={15} step={0.1} 
-                                    onChange={v => setConfig({...config, chaos: v})} />
-                                
-                                <div className="pt-4 border-t border-white/5">
-                                    <div className="flex justify-between text-[9px] font-mono text-slate-500 uppercase">
-                                        <span>Gerando Padrão</span>
-                                        <span>{Math.pow(2, config.depth)} Conexões</span>
-                                    </div>
+                                <div className="space-y-8">
+                                    <Control label="Densidade Ancestral" val={config.depth} min={1} max={10} 
+                                        onChange={v => setConfig({...config, depth: v})} />
+                                    <Control label="Ângulo de Escolha" val={config.angle} min={5} max={120} 
+                                        onChange={v => setConfig({...config, angle: v})} suffix="°" />
+                                    <Control label="Fator de Resiliência" val={config.ratio} min={0.5} max={0.82} step={0.01} 
+                                        onChange={v => setConfig({...config, ratio: v})} />
+                                    <Control label="Turbulência Vital" val={config.chaos} min={0} max={10} step={0.1} 
+                                        onChange={v => setConfig({...config, chaos: v})} />
+                                </div>
+
+                                <div className="pt-6 border-t border-white/5 flex justify-between items-center">
+                                    <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Complexidade</span>
+                                    <span className="text-xl font-black text-white">{Math.pow(2, config.depth)} <span className="text-[10px] font-normal text-violet-500">bits</span></span>
                                 </div>
                             </div>
 
-                            <div className="bg-violet-600/5 border border-violet-500/10 p-6 rounded-3xl flex-1 custom-scrollbar overflow-y-auto">
-                                <h4 className="text-[11px] font-bold text-violet-400 mb-3 uppercase font-mono">A Verdade Oculta</h4>
-                                <p className="text-[12px] text-slate-400 leading-relaxed font-light space-y-4">
-                                    Visitando este módulo, você percebe que o caos é apenas uma ordem que você ainda não aprendeu a ler.
-                                    <br/><br/>
-                                    Cada bifurcação representa o **Livre Arbítrio** dentro de um **Destino Matemático**. Como nas redes de *Ifá*, a repetição cria a base da nossa existência. Você não está olhando para uma imagem, está olhando para o mapa do seu próprio pensamento.
-                                </p>
+                            <div className="bg-violet-600/5 border border-violet-500/10 p-8 rounded-[2.5rem] flex-1 overflow-y-auto custom-scrollbar">
+                                <h4 className="text-[12px] font-bold text-violet-400 mb-4 uppercase font-mono tracking-widest">Orientação do Módulo</h4>
+                                <div className="text-[13px] text-slate-400 leading-relaxed font-light space-y-4 italic">
+                                    <p>Este não é um código estático. É uma representação da **Matriz de Ifá** e da matemática da natureza.</p>
+                                    <p>Ao interagir, você percebe que cada nível de profundidade exige mais energia, mas revela mais beleza. Assim é o conhecimento.</p>
+                                    <p>O que você vê no centro é o seu próprio potencial de expansão.</p>
+                                </div>
                             </div>
                         </div>
 
-                        {/* O Espelho Sagrado (Visualizer) */}
+                        {/* O Vórtice da Árvore (Visualizer) */}
                         <div className="col-span-12 lg:col-span-9 relative group">
-                            <div className="absolute inset-0 bg-violet-600/5 rounded-[40px] blur-3xl group-hover:bg-violet-600/10 transition-all duration-1000"></div>
-                            <div className="absolute inset-0 border border-white/5 rounded-[40px] overflow-hidden bg-black/40 backdrop-blur-sm">
+                            <div className="absolute inset-0 bg-violet-600/5 rounded-[3rem] blur-3xl opacity-50"></div>
+                            <div className="absolute inset-0 border border-white/5 rounded-[3rem] overflow-hidden bg-black/20 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.9)]">
                                 <canvas ref={canvasRef} className="w-full h-full" />
                                 
-                                {/* HUD Intuitivo */}
-                                <div className="absolute top-8 left-8 space-y-4 opacity-40 group-hover:opacity-100 transition-opacity">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-1 h-10 bg-violet-500"></div>
-                                        <div>
-                                            <p className="text-[10px] font-mono text-white uppercase tracking-tighter">Observador Ativo</p>
-                                            <p className="text-[9px] font-mono text-violet-400">POS: {mouse.x.toFixed(2)} | {mouse.y.toFixed(2)}</p>
+                                {/* HUD Lateral de Dados */}
+                                <div className="absolute top-10 right-10 text-right opacity-30 group-hover:opacity-80 transition-all duration-700">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-mono text-violet-400">SYNC_ID: {APP_ID}</p>
+                                        <p className="text-[10px] font-mono text-white tracking-widest">REAL-TIME_RECURSION_STREAM</p>
+                                        <div className="flex gap-1 justify-end mt-2">
+                                            {[...Array(12)].map((_,i) => (
+                                                <div key={i} className={`w-1 h-4 bg-violet-500/40 animate-pulse`} style={{animationDelay: `${i*100}ms`}}></div>
+                                            ))}
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-12 text-[9px] font-mono text-slate-600 uppercase tracking-[0.3em]">
-                                    <span>Padrão_Fractal: OK</span>
-                                    <span>Conexão_Ancestral: SYNC</span>
-                                    <span>Luz_Evolução: {Math.sin(time*0.005) > 0.9 ? 'EMERGING' : 'STABLE'}</span>
+                                {/* Label de Base */}
+                                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 text-center">
+                                    <p className="text-[9px] font-mono text-violet-500/40 uppercase tracking-[1em]">Raiz Ancestral da Verdade</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Barra de Frequência Terrestre */}
-                    <div className="mt-8 flex justify-between items-end border-t border-white/5 pt-6">
-                        <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-mono text-slate-500 uppercase">Localização na Rede</span>
-                            <span className="text-[11px] text-violet-400 font-bold tracking-widest">AFROKÓDICA_CORE // NAMIBE_SYNC</span>
+                    {/* Barra de Status Afrokódica */}
+                    <div className="mt-8 flex justify-between items-center border-t border-white/5 pt-8">
+                        <div className="flex gap-12">
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-mono text-slate-500 uppercase">Frequência</span>
+                                <span className="text-xs text-violet-400 font-bold tracking-tighter">432Hz // HARMONIC_RESONANCE</span>
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-mono text-slate-500 uppercase">Processamento</span>
+                                <span className="text-xs text-white/80 font-mono tracking-tighter">ALGO_SPIRITUAL_V3.5</span>
+                            </div>
                         </div>
-                        <div className="text-right">
-                            <p className="text-[9px] text-slate-600 font-mono mb-2">INTEGRIDADE DA REALIDADE: 99.98%</p>
-                            <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-violet-600" style={{width: '99%'}}></div>
+                        
+                        <div className="flex items-center gap-6">
+                            <div className="text-right">
+                                <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1">Status da Expansão</p>
+                                <div className="w-64 h-[2px] bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-violet-900 to-violet-400" style={{width: '85%'}}></div>
+                                </div>
+                            </div>
+                            <div className="w-10 h-10 border border-violet-500/20 rounded-full flex items-center justify-center text-violet-500 text-xs font-bold">
+                                Ω
                             </div>
                         </div>
                     </div>
@@ -260,15 +312,15 @@
             );
         }
 
-        const Slider = ({ label, val, min, max, step = 1, onChange, suffix = "" }) => (
-            <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-tighter">{label}</span>
-                    <span className="text-[11px] font-bold text-violet-400">{val}{suffix}</span>
+        const Control = ({ label, val, min, max, step = 1, onChange, suffix = "" }) => (
+            <div className="group/item">
+                <div className="flex justify-between items-center mb-3">
+                    <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest group-hover/item:text-violet-400 transition-colors">{label}</span>
+                    <span className="text-xs font-black text-white bg-violet-500/10 px-2 py-0.5 rounded">{val}{suffix}</span>
                 </div>
                 <input type="range" min={min} max={max} step={step} value={val} 
                     onChange={e => onChange(parseFloat(e.target.value))}
-                    className="w-full h-0.5 bg-white/10 appearance-none cursor-pointer accent-violet-500 hover:accent-violet-400 transition-all" />
+                    className="w-full h-[1px] bg-white/10 appearance-none cursor-pointer accent-violet-500 transition-all" />
             </div>
         );
 
