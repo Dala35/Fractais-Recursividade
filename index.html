@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Protocolo de Expansão - Fractais & Recursividade v3.5</title>
+    <title>Protocolo de Expansão - Fractais & Recursividade v3.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -36,13 +36,22 @@
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 12px;
-            height: 12px;
-            background: #8b5cf6;
+            width: 18px;
+            height: 18px;
+            background: #a78bfa;
             cursor: pointer;
             border-radius: 50%;
-            box-shadow: 0 0 10px #8b5cf6;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.6);
         }
+
+        .sidebar-transition {
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        /* Custom scrollbar for menu */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); border-radius: 10px; }
     </style>
 </head>
 <body class="sacred-gradient">
@@ -52,41 +61,42 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const APP_ID = "FRACTAL-ANCESTRAL-3.5";
+        const APP_ID = "FRACTAL-ANCESTRAL-3.7";
 
         const GUIDE_MESSAGES = [
             "Observe a base: Tudo o que existe nasce de uma única verdade simples.",
             "A repetição não é estagnação, é a arquitetura da eternidade.",
-            "Mova seu cursor. Você não é apenas um observador, você é um agente de mudança.",
-            "As luzes que correm pelos ramos são pensamentos ancestrais buscando manifestação.",
-            "O caos que você vê é apenas uma ordem complexa que você está prestes a decifrar.",
-            "Sua linhagem é um fractal: você carrega o código de todos os que vieram antes."
+            "Mova seu cursor ou toque no ecrã. Você é um agente de mudança.",
+            "As luzes que correm pelos ramos são pensamentos ancestrais em manifestação.",
+            "O caos que vê é apenas uma ordem complexa aguardando decifração.",
+            "Sua linhagem é um fractal: você carrega o código de todos os anteriores."
         ];
 
         const useBioAudio = () => {
             const audioCtx = useRef(null);
-            const initAudio = () => {
-                if (!audioCtx.current) {
-                    audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-                }
+            const initAudio = async () => {
+                if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.current.state === 'suspended') await audioCtx.current.resume();
             };
-            const triggerHarmonic = (freq, vol = 0.03) => {
-                if (!audioCtx.current || audioCtx.current.state === 'suspended') return;
-                const osc = audioCtx.current.createOscillator();
-                const g = audioCtx.current.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, audioCtx.current.currentTime);
-                g.gain.setValueAtTime(vol, audioCtx.current.currentTime);
-                g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.current.currentTime + 1.5);
-                osc.connect(g).connect(audioCtx.current.destination);
-                osc.start(); osc.stop(audioCtx.current.currentTime + 1.5);
+            const triggerHarmonic = (freq, vol = 0.02) => {
+                if (!audioCtx.current || audioCtx.current.state !== 'running') return;
+                try {
+                    const osc = audioCtx.current.createOscillator();
+                    const g = audioCtx.current.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, audioCtx.current.currentTime);
+                    g.gain.setValueAtTime(vol, audioCtx.current.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.current.currentTime + 1.2);
+                    osc.connect(g).connect(audioCtx.current.destination);
+                    osc.start(); osc.stop(audioCtx.current.currentTime + 1.2);
+                } catch(e) {}
             };
             return { initAudio, triggerHarmonic };
         };
 
         function App() {
             const [config, setConfig] = useState({
-                depth: 8,
+                depth: window.innerWidth < 768 ? 7 : 8,
                 angle: 25,
                 ratio: 0.77,
                 chaos: 1.5,
@@ -95,28 +105,32 @@
             const [time, setTime] = useState(0);
             const [mouse, setMouse] = useState({ x: 0, y: 0 });
             const [guideIndex, setGuideIndex] = useState(0);
+            const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
             const canvasRef = useRef(null);
             const { initAudio, triggerHarmonic } = useBioAudio();
 
             useEffect(() => {
-                const interval = setInterval(() => {
-                    setGuideIndex(prev => (prev + 1) % GUIDE_MESSAGES.length);
-                }, 8000);
+                const interval = setInterval(() => setGuideIndex(prev => (prev + 1) % GUIDE_MESSAGES.length), 8000);
                 return () => clearInterval(interval);
             }, []);
 
             useEffect(() => {
-                const handleMove = (e) => setMouse({ 
-                    x: (e.clientX / window.innerWidth) - 0.5, 
-                    y: (e.clientY / window.innerHeight) - 0.5 
-                });
-                window.addEventListener('mousemove', handleMove);
-                return () => window.removeEventListener('mousemove', handleMove);
+                const handleInput = (e) => {
+                    const x = e.touches ? e.touches[0].clientX : e.clientX;
+                    const y = e.touches ? e.touches[0].clientY : e.clientY;
+                    setMouse({ x: (x / window.innerWidth) - 0.5, y: (y / window.innerHeight) - 0.5 });
+                };
+                window.addEventListener('mousemove', handleInput);
+                window.addEventListener('touchmove', handleInput, { passive: true });
+                return () => {
+                    window.removeEventListener('mousemove', handleInput);
+                    window.removeEventListener('touchmove', handleInput);
+                };
             }, []);
 
             useEffect(() => {
                 const canvas = canvasRef.current;
-                const ctx = canvas.getContext('2d');
+                const ctx = canvas.getContext('2d', { alpha: false });
                 let frame;
 
                 const resize = () => {
@@ -129,15 +143,12 @@
 
                 const drawBranch = (x1, y1, angle, len, d, offset) => {
                     if (d === 0) return;
-
-                    // Dinâmica de Movimento Vital
-                    const wind = Math.sin(time * 0.001 + d + offset) * config.chaos;
-                    const interactiveBend = mouse.x * (20 * (config.depth - d));
                     
+                    const wind = Math.sin(time * 0.001 + d + offset) * config.chaos;
+                    const interactiveBend = mouse.x * (18 * (config.depth - d));
                     const x2 = x1 + Math.cos((angle + wind + interactiveBend) * Math.PI / 180) * len;
                     const y2 = y1 + Math.sin((angle + wind + interactiveBend) * Math.PI / 180) * len;
-
-                    // Pulso de Consciência
+                    
                     const pulsePos = (time * config.flowSpeed) % 1;
                     const isPulsing = Math.abs((1 - (d / config.depth)) - pulsePos) < 0.1;
 
@@ -147,44 +158,49 @@
                     
                     const hue = (240 + d * 15 + time * 0.01) % 360;
                     if (isPulsing) {
-                        ctx.strokeStyle = `hsla(${hue}, 100%, 85%, 0.8)`;
-                        ctx.lineWidth = d * 1.5;
-                        if (d === 1 && Math.random() > 0.98) triggerHarmonic(330 + (8-d)*50);
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 85%, 0.9)`;
+                        ctx.lineWidth = d * 1.8;
+                        if (d === 1 && Math.random() > 0.992) triggerHarmonic(220 + (8-d)*60);
                     } else {
-                        ctx.strokeStyle = `hsla(${hue}, 60%, 40%, ${0.2 + (d / config.depth) * 0.6})`;
-                        ctx.lineWidth = d * 0.6;
+                        ctx.strokeStyle = `hsla(${hue}, 60%, 45%, ${0.25 + (d / config.depth) * 0.65})`;
+                        ctx.lineWidth = d * 0.7;
                     }
                     
                     ctx.lineCap = 'round';
                     ctx.stroke();
 
-                    // Renderização das "Sementes de Dados"
+                    // Recuperado: Sementes de Dados (Foliage)
                     if (d <= 2) {
                         ctx.beginPath();
-                        ctx.arc(x2, y2, isPulsing ? 3 : 1, 0, Math.PI * 2);
-                        ctx.fillStyle = isPulsing ? '#fff' : `hsla(${hue}, 80%, 60%, 0.3)`;
+                        ctx.arc(x2, y2, isPulsing ? 3.5 : 1.2, 0, Math.PI * 2);
+                        ctx.fillStyle = isPulsing ? '#fff' : `hsla(${hue}, 85%, 65%, 0.4)`;
                         ctx.fill();
+                        if (isPulsing && d === 1) {
+                            ctx.shadowBlur = 10;
+                            ctx.shadowColor = `hsla(${hue}, 100%, 80%, 0.8)`;
+                            ctx.stroke();
+                            ctx.shadowBlur = 0;
+                        }
                     }
 
-                    // Divisão Assimétrica Real
-                    const jitter = Math.sin(time * 0.0005) * 1.5;
+                    const jitter = Math.sin(time * 0.0006) * 1.2;
                     drawBranch(x2, y2, angle - config.angle + jitter, len * config.ratio, d - 1, offset + 1);
                     drawBranch(x2, y2, angle + config.angle - jitter, len * config.ratio, d - 1, offset + 2);
                 };
 
                 const animate = (t) => {
                     setTime(t);
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.fillStyle = '#010409';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
                     
                     const centerX = canvas.offsetWidth / 2;
-                    const centerY = canvas.offsetHeight * 0.95;
-
-                    // Desenho da Raiz (Base Forte)
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = 'rgba(139, 92, 246, 0.3)';
-                    drawBranch(centerX, centerY, -90, canvas.offsetHeight * 0.2, config.depth, 0);
+                    const centerY = canvas.offsetHeight * 0.92;
+                    
+                    ctx.shadowBlur = 25;
+                    ctx.shadowColor = 'rgba(139, 92, 246, 0.35)';
+                    drawBranch(centerX, centerY, -90, canvas.offsetHeight * (window.innerWidth < 768 ? 0.14 : 0.18), config.depth, 0);
                     ctx.shadowBlur = 0;
-
+                    
                     frame = requestAnimationFrame(animate);
                 };
 
@@ -193,43 +209,56 @@
             }, [config, mouse, time]);
 
             return (
-                <div className="h-screen w-full flex flex-col p-6 md:p-10 overflow-hidden relative z-10">
-                    {/* Orientação em Tempo Real (O Guia) */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none text-center max-w-xl z-0">
-                        <p className="guide-text text-lg md:text-2xl font-light italic text-violet-300/20 leading-relaxed px-4">
-                            "{GUIDE_MESSAGES[guideIndex]}"
-                        </p>
-                    </div>
-
-                    <div className="flex justify-between items-start mb-8 relative z-20">
-                        <div>
-                            <div className="flex items-center gap-4 mb-2">
-                                <div className="w-3 h-3 bg-violet-500 rounded-full animate-ping"></div>
-                                <h1 className="text-3xl font-black tracking-tighter text-white glow-text uppercase italic">Conscious_Recursion</h1>
+                <div className="h-screen w-full flex flex-col overflow-hidden relative z-10 p-4 md:p-6 select-none">
+                    
+                    {/* Header Unificado */}
+                    <header className="flex justify-between items-center z-50 mb-4 bg-black/40 backdrop-blur-xl p-4 rounded-3xl border border-white/10 shadow-2xl">
+                        <div className="flex items-center gap-4">
+                            <button 
+                                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                className="p-3 hover:bg-violet-500/20 rounded-xl transition-all text-violet-400"
+                                aria-label="Menu"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isSidebarOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+                                </svg>
+                            </button>
+                            <div>
+                                <h1 className="text-xl md:text-2xl font-black tracking-tighter text-white uppercase italic leading-none flex items-center gap-2">
+                                    Conscious_Recursion
+                                    <span className="text-[10px] bg-violet-600 px-2 py-0.5 rounded-full not-italic tracking-normal">v3.7</span>
+                                </h1>
+                                <p className="text-[8px] font-mono text-violet-400 tracking-[0.3em] uppercase mt-1">Afrokódica_System_Sync</p>
                             </div>
-                            <p className="text-[10px] font-mono text-violet-400 tracking-[0.5em] uppercase pl-7">Protocolo Ancestral Ativo</p>
                         </div>
-                        
-                        <div className="flex gap-4">
+
+                        <div className="flex items-center gap-4">
                             <button 
                                 onClick={initAudio}
-                                className="px-6 py-2 border border-violet-500/40 text-[11px] font-mono hover:bg-violet-600 hover:text-white transition-all rounded-full bg-black/60 backdrop-blur-md text-violet-300"
+                                className="px-5 py-2.5 bg-violet-600/10 border border-violet-500/30 text-[10px] font-mono text-violet-300 rounded-full hover:bg-violet-600 hover:text-white transition-all shadow-lg active:scale-95"
                             >
-                                [ INICIAR BIO-SINCRONIA ]
+                                [ SINCRONIA_BIO ]
                             </button>
+                            <div className="w-10 h-10 border border-violet-500/30 rounded-2xl hidden md:flex items-center justify-center text-violet-400 text-xs font-bold bg-white/5">Ω</div>
                         </div>
-                    </div>
+                    </header>
 
-                    <div className="flex-1 grid grid-cols-12 gap-10 min-h-0 relative z-20">
-                        {/* Controles de Manifestação */}
-                        <div className="col-span-12 lg:col-span-3 flex flex-col gap-6">
-                            <div className="bg-black/40 border border-white/10 p-8 rounded-[2.5rem] backdrop-blur-3xl space-y-10 shadow-2xl">
-                                <h3 className="text-[11px] font-mono text-violet-400 uppercase tracking-widest flex items-center gap-3">
+                    <div className="flex-1 flex gap-6 min-h-0 relative">
+                        
+                        {/* Sidebar Recuperada com Scroll e Detalhes */}
+                        <aside className={`
+                            absolute lg:relative inset-y-0 left-0 z-40 w-72 md:w-80
+                            sidebar-transition transform ${isSidebarOpen ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0 lg:w-0'}
+                            bg-black/90 lg:bg-transparent backdrop-blur-3xl lg:backdrop-blur-none
+                            flex flex-col gap-6 p-6 lg:p-0
+                        `}>
+                            <div className="bg-black/40 border border-white/10 p-6 rounded-[2.5rem] space-y-8 shadow-2xl flex flex-col overflow-y-auto custom-scrollbar">
+                                <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-widest flex items-center gap-3">
                                     <span className="w-4 h-[1px] bg-violet-500"></span>
-                                    Geometria Sagrada
+                                    Parâmetros de Ifá
                                 </h3>
 
-                                <div className="space-y-8">
+                                <div className="space-y-7">
                                     <Control label="Densidade Ancestral" val={config.depth} min={1} max={10} 
                                         onChange={v => setConfig({...config, depth: v})} />
                                     <Control label="Ângulo de Escolha" val={config.angle} min={5} max={120} 
@@ -240,74 +269,83 @@
                                         onChange={v => setConfig({...config, chaos: v})} />
                                 </div>
 
-                                <div className="pt-6 border-t border-white/5 flex justify-between items-center">
-                                    <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Complexidade</span>
-                                    <span className="text-xl font-black text-white">{Math.pow(2, config.depth)} <span className="text-[10px] font-normal text-violet-500">bits</span></span>
-                                </div>
-                            </div>
-
-                            <div className="bg-violet-600/5 border border-violet-500/10 p-8 rounded-[2.5rem] flex-1 overflow-y-auto custom-scrollbar">
-                                <h4 className="text-[12px] font-bold text-violet-400 mb-4 uppercase font-mono tracking-widest">Orientação do Módulo</h4>
-                                <div className="text-[13px] text-slate-400 leading-relaxed font-light space-y-4 italic">
-                                    <p>Este não é um código estático. É uma representação da **Matriz de Ifá** e da matemática da natureza.</p>
-                                    <p>Ao interagir, você percebe que cada nível de profundidade exige mais energia, mas revela mais beleza. Assim é o conhecimento.</p>
-                                    <p>O que você vê no centro é o seu próprio potencial de expansão.</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* O Vórtice da Árvore (Visualizer) */}
-                        <div className="col-span-12 lg:col-span-9 relative group">
-                            <div className="absolute inset-0 bg-violet-600/5 rounded-[3rem] blur-3xl opacity-50"></div>
-                            <div className="absolute inset-0 border border-white/5 rounded-[3rem] overflow-hidden bg-black/20 backdrop-blur-sm shadow-[inset_0_0_100px_rgba(0,0,0,0.9)]">
-                                <canvas ref={canvasRef} className="w-full h-full" />
-                                
-                                {/* HUD Lateral de Dados */}
-                                <div className="absolute top-10 right-10 text-right opacity-30 group-hover:opacity-80 transition-all duration-700">
-                                    <div className="space-y-1">
-                                        <p className="text-[10px] font-mono text-violet-400">SYNC_ID: {APP_ID}</p>
-                                        <p className="text-[10px] font-mono text-white tracking-widest">REAL-TIME_RECURSION_STREAM</p>
-                                        <div className="flex gap-1 justify-end mt-2">
-                                            {[...Array(12)].map((_,i) => (
-                                                <div key={i} className={`w-1 h-4 bg-violet-500/40 animate-pulse`} style={{animationDelay: `${i*100}ms`}}></div>
-                                            ))}
-                                        </div>
+                                <div className="pt-6 border-t border-white/10">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-[9px] font-mono text-slate-500 uppercase tracking-widest">Complexidade Ativa</span>
+                                        <span className="text-white font-black text-sm">{Math.pow(2, config.depth).toLocaleString()} <span className="text-[10px] font-normal text-violet-500 italic">nós</span></span>
+                                    </div>
+                                    <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                                        <div className="h-full bg-violet-500" style={{width: `${(config.depth/10)*100}%`}}></div>
                                     </div>
                                 </div>
+                            </div>
 
-                                {/* Label de Base */}
-                                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 text-center">
-                                    <p className="text-[9px] font-mono text-violet-500/40 uppercase tracking-[1em]">Raiz Ancestral da Verdade</p>
+                            <div className="bg-violet-600/5 border border-violet-500/10 p-6 rounded-[2.5rem] flex-1">
+                                <h4 className="text-[10px] font-bold text-violet-400 mb-3 uppercase font-mono tracking-widest flex items-center gap-2">
+                                    <span className="animate-pulse">●</span> Módulo de Orientação
+                                </h4>
+                                <p className="text-[12px] text-slate-400 leading-relaxed font-light italic">
+                                    Você está manipulando a geometria da vida. Cada ramo representa uma decisão; cada fractal, uma linhagem. A harmonia é o equilíbrio entre caos e ordem.
+                                </p>
+                            </div>
+                        </aside>
+
+                        {/* Visualizer Principal com HUD de Dados v3.5 */}
+                        <main className="flex-1 relative group bg-black/30 rounded-[3rem] border border-white/10 overflow-hidden shadow-inner">
+                            {/* Mensagem Guia Flutuante */}
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                                <p className="guide-text text-base md:text-2xl font-light italic text-violet-300/10 text-center max-w-lg px-8 leading-snug">
+                                    "{GUIDE_MESSAGES[guideIndex]}"
+                                </p>
+                            </div>
+
+                            <canvas ref={canvasRef} className="w-full h-full cursor-none relative z-10" />
+
+                            {/* HUD de Dados em Tempo Real (Recuperado) */}
+                            <div className="absolute top-8 right-8 text-right z-20 hidden sm:block pointer-events-none opacity-40 group-hover:opacity-100 transition-all duration-700">
+                                <div className="space-y-1 font-mono">
+                                    <p className="text-[9px] text-violet-400">STREAM_ID: {APP_ID}</p>
+                                    <p className="text-[10px] text-white tracking-widest uppercase">REAL_TIME_GEOMETRY</p>
+                                    <div className="flex gap-1 justify-end mt-2">
+                                        {[...Array(12)].map((_,i) => (
+                                            <div key={i} className={`w-1 h-3 bg-violet-500/50 animate-pulse`} style={{animationDelay: `${i*80}ms`}}></div>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+
+                            {/* Cursor Customizado (Imersão) */}
+                            <div 
+                                className="absolute w-8 h-8 border border-violet-500/50 rounded-full pointer-events-none z-30 mix-blend-screen hidden lg:block -translate-x-1/2 -translate-y-1/2"
+                                style={{ left: `${(mouse.x + 0.5) * 100}%`, top: `${(mouse.y + 0.5) * 100}%` }}
+                            >
+                                <div className="absolute inset-2 bg-violet-500/20 rounded-full animate-ping"></div>
+                            </div>
+
+                            {/* Raiz HUD */}
+                            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 text-center pointer-events-none z-20">
+                                <p className="text-[10px] font-mono text-violet-500/40 uppercase tracking-[0.8em] font-bold">Raiz Ancestral</p>
+                            </div>
+                        </main>
                     </div>
 
-                    {/* Barra de Status Afrokódica */}
-                    <div className="mt-8 flex justify-between items-center border-t border-white/5 pt-8">
-                        <div className="flex gap-12">
+                    {/* Footer Consolidado */}
+                    <footer className="mt-6 flex flex-wrap justify-between items-center gap-6 text-[10px] font-mono text-slate-500 uppercase tracking-widest px-4">
+                        <div className="flex gap-10 items-center">
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-mono text-slate-500 uppercase">Frequência</span>
-                                <span className="text-xs text-violet-400 font-bold tracking-tighter">432Hz // HARMONIC_RESONANCE</span>
+                                <span className="text-[8px] text-slate-600 mb-0.5">Frequência Harmónica</span>
+                                <span className="text-violet-400 font-bold">432Hz // RESONANCE</span>
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[9px] font-mono text-slate-500 uppercase">Processamento</span>
-                                <span className="text-xs text-white/80 font-mono tracking-tighter">ALGO_SPIRITUAL_V3.5</span>
+                                <span className="text-[8px] text-slate-600 mb-0.5">Localização de Sync</span>
+                                <span className="text-white/80">Namibe_Sync_v3.7</span>
                             </div>
                         </div>
-                        
-                        <div className="flex items-center gap-6">
-                            <div className="text-right">
-                                <p className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mb-1">Status da Expansão</p>
-                                <div className="w-64 h-[2px] bg-white/5 rounded-full overflow-hidden">
-                                    <div className="h-full bg-gradient-to-r from-violet-900 to-violet-400" style={{width: '85%'}}></div>
-                                </div>
-                            </div>
-                            <div className="w-10 h-10 border border-violet-500/20 rounded-full flex items-center justify-center text-violet-500 text-xs font-bold">
-                                Ω
-                            </div>
+                        <div className="flex items-center gap-4 bg-white/5 px-4 py-2 rounded-full border border-white/5">
+                            <span className="text-violet-500 font-bold animate-pulse text-[12px]">●</span>
+                            <span className="text-slate-300">Estado: Evolução Consciente Ativa</span>
                         </div>
-                    </div>
+                    </footer>
                 </div>
             );
         }
@@ -316,11 +354,11 @@
             <div className="group/item">
                 <div className="flex justify-between items-center mb-3">
                     <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest group-hover/item:text-violet-400 transition-colors">{label}</span>
-                    <span className="text-xs font-black text-white bg-violet-500/10 px-2 py-0.5 rounded">{val}{suffix}</span>
+                    <span className="text-[11px] font-black text-white bg-violet-500/20 px-2 py-0.5 rounded-lg border border-violet-500/20">{val}{suffix}</span>
                 </div>
                 <input type="range" min={min} max={max} step={step} value={val} 
                     onChange={e => onChange(parseFloat(e.target.value))}
-                    className="w-full h-[1px] bg-white/10 appearance-none cursor-pointer accent-violet-500 transition-all" />
+                    className="w-full h-[3px] bg-white/10 appearance-none cursor-pointer accent-violet-400 transition-all rounded-full" />
             </div>
         );
 
